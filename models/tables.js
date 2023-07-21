@@ -91,6 +91,10 @@ Teacher.belongsToMany(Classes, { through: Teacher_class })
 
 Student.belongsToMany(Exams, { through: Student_exams })
 Exams.belongsToMany(Student, { through: Student_exams })
+Student.hasMany(Student_exams)
+Student_exams.belongsTo(Student)
+Exams.hasMany(Student_exams)
+Student_exams.belongsTo(Exams)
 
 Classes.belongsToMany(Exams, { through: Class_exams })
 Exams.belongsToMany(Classes, { through: Class_exams })

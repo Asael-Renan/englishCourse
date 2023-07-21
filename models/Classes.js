@@ -21,11 +21,11 @@ export default function createClasses() {
     }
 
     async function getByNumber(number) {
-        return await Classes.findByPk(number)
+        return await Classes.findByPk(number, { raw: true })
     }
 
     async function getDataByNumber(number) {
-        return await Classes.findByPk(number, {
+        return (await Classes.findByPk(number, {
             include: [
                 {
                     model: Teacher,
@@ -33,11 +33,11 @@ export default function createClasses() {
                 },
                 {
                     model: Student,
-                    attributes: { exclude: ['password'] }
+                    attributes: { exclude: ['password'] },
+                    order: [['name', 'ASC']]
                 }
             ]
-
-        })
+        })).dataValues
     }
 
     async function destroy(number) {

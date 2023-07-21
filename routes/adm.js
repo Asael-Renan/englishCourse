@@ -42,6 +42,10 @@ router.get('/getClasses', admAuth, async (req, res) => {
     res.json(await classes.getAll())
 })
 
+router.get('/getClass/:number', admAuth, async (req, res) => {
+    res.json(await classes.getDataByNumber(req.params.number))
+})
+
 
 //create class
 router.post('/createClass', admAuth, async (req, res) => {

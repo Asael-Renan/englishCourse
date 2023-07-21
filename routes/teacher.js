@@ -32,6 +32,14 @@ router.get('/getData/:id', teacherAuth, async (req, res) => {
     }
 })
 
+router.get('/getClassData/:classNumber', teacherAuth, async (req, res) => {
+    try {
+        res.json(await teacher.getClassData(req.params.classNumber)) ? res.status(200).send() : res.status(404).send()
+    } catch (error) {
+        res.status(404).send()
+    }
+})
+
 //create exams
 router.post('/createExam', teacherAuth, async (req, res) => {
     try {
@@ -48,12 +56,13 @@ router.post('/createExam', teacherAuth, async (req, res) => {
     }
 })
 
-router.post('/setExameGradeToStudent', teacherAuth, async (req, res) => {
+router.post('/setExameGradeToStudent', teacherAuth, (req, res) => {
     try {
         req.body.data.forEach(async studentData => {
             const { grade, studentId, examId } = studentData
             await student.setExamGrade(grade, studentId, examId)
         });
+        console.log('------------------------------------------')
         res.status(200).send()
     } catch (error) {
         console.error(error)

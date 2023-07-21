@@ -1,4 +1,4 @@
-import { Classes, Teacher, Student, Exams } from "./tables.js"
+import { Classes, Teacher, Student, Exams, Student_exams } from "./tables.js"
 import bcrypt from 'bcrypt'
 
 export default function createTeacher() {
@@ -31,21 +31,30 @@ export default function createTeacher() {
     async function getById(id) {
         try {
             return await Teacher.findByPk(id, {
-                include: {
-                    model: Classes,
-                    include: [
-                        {
-                            model: Student,
-                            attributes: { exclude: ['password'] }
-                        },
-                        {
-                            model: Exams
-                        }
-                    ]
-                }, attributes: { exclude: ['password'] }
+                attributes: { exclude: ['password'] },
+                include: Classes
             })
         } catch (error) {
             console.error('error: ' + error)
+        }
+    }
+
+    async function getClassData(classNumber) {
+        try {
+            return await Classes.findByPk(classNumber, {
+                include: [
+                    {
+                        model: Student,
+                        include: Student_exams,
+                        attributes: { exclude: ['password'] }
+                    },
+                    {
+                        model: Exams
+                    }
+                ]
+            })
+        } catch (error) {
+            console.error("Erro ao buscar dados da turma: " + error)
         }
     }
 
@@ -56,6 +65,7 @@ export default function createTeacher() {
         create,
         getAll,
         destroy,
-        getById
+        getById,
+        getClassData
     }
 }

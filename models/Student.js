@@ -28,29 +28,34 @@ export default function createStudent() {
         return await Student.findByPk(id, { include: Classes, attributes: { exclude: ['password'] } })
     }
 
-    async function setExamGrade(studentGrade, studentId, examId) {
+    async function setExamGrade(grade, studentId, examId) {
         try {
+            grade = parseFloat(grade)
+            if (grade < 0) return false
+
             const studentExam = await Student_exams.findOrCreate({
                 where: { studentId, examId },
-                defaults: { studentGrade }
+                defaults: { studentGrade: grade }
             });
 
-            const [studentExamRecord, created] = studentExam;
-
+            const [studentExamRecord, created] = studentExam,
+                examGrade = studentExamRecord.dataValues.studentGrade,
+                student = await Student.findByPk(studentId, { raw: true }),
+                studentGrade = student.grade
             if (!created) {
-                // Registro já existe, então atualize a nota
-                await studentExamRecord.update({ studentGrade });
+                if (examGrade === grade) return false
+                console.log(`Nota atualizada para ${student.name}: ${studentGrade} - ${examGrade} + ${grade} = ${studentGrade - examGrade + grade}`)
+                await studentExamRecord.update({ studentGrade: grade });
 
                 await Student.update(
-                    { grade: studentGrade },
+                    { grade: studentGrade - examGrade + grade },
                     { where: { id: studentId } }
                 );
-
                 return true;
             } else {
-                // Registro criado, faça o que for necessário
+                console.log(`Nota criada para ${student.name}: ${studentGrade} + ${grade} = ${studentGrade + examGrade}`)
                 await Student.update(
-                    { grade: studentGrade },
+                    { grade: studentGrade + examGrade },
                     { where: { id: studentId } }
                 );
 
