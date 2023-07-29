@@ -42,10 +42,13 @@ router.get('/getClasses', admAuth, async (req, res) => {
     res.json(await classes.getAll())
 })
 
-router.get('/getClass/:number', admAuth, async (req, res) => {
-    res.json(await classes.getDataByNumber(req.params.number))
+router.get('/teachers', admAuth, async (req, res) => {
+    res.json(await teacher.getAll())
 })
 
+router.get('/students', admAuth, async (req, res) => {
+    res.json(await student.getAll())
+})
 
 //create class
 router.post('/createClass', admAuth, async (req, res) => {

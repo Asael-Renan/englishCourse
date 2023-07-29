@@ -3,7 +3,6 @@ import session from 'express-session';
 import bodyParser from 'body-parser';
 import { join } from 'path'
 import { login, studentAuth } from './middlewares.js';
-import { checkIfUserExists } from './helper.js';
 import createTeacher from './models/Teacher.js';
 import createStudent from './models/Student.js';
 import admRoutes from './routes/adm.js';
@@ -47,12 +46,18 @@ app.get('/logout', (req, res) => {
 })
 
 //get only one
-app.get('/getTeacher/:id', async (req, res) => {
-    checkIfUserExists(res, await teacher.getById(req.params.id))
-})
 
 app.get('/getStudent/:id', async (req, res) => {
-    checkIfUserExists(res, await student.getById(req.params.id))
+    try {
+        const data = student.getById(req.params.id)
+        if (data) {
+            res.json(data)
+        } else {
+            res.status(404).send()
+        }
+    } catch {
+        res.status(404).send()
+    }
 })
 
 app.get('/student/:id', studentAuth, async (req, res) => {

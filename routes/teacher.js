@@ -46,9 +46,7 @@ router.post('/createExam', teacherAuth, async (req, res) => {
         const { title, grade, classNumber } = req.body
         const exam = await exams.create(title, grade)
         const classe = await classes.getByNumber(classNumber)
-        console.log(classe)
         if (exam && classe) {
-            console.log(classe)
             await classe.addExam(exam) ? res.status(201).send() : res.status(400).send()
         }
     } catch (error) {

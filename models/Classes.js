@@ -1,4 +1,4 @@
-import { Classes, Teacher, Student } from "./tables.js"
+import { Classes, Teacher, Student, Exams } from "./tables.js"
 
 export default function createClasses() {
 
@@ -25,19 +25,52 @@ export default function createClasses() {
     }
 
     async function getDataByNumber(number) {
-        return (await Classes.findByPk(number, {
-            include: [
-                {
-                    model: Teacher,
-                    attributes: { exclude: ['password'] }
-                },
-                {
-                    model: Student,
-                    attributes: { exclude: ['password'] },
-                    order: [['name', 'ASC']]
-                }
-            ]
-        })).dataValues
+        try {
+            return (await Classes.findByPk(number, {
+                include: [
+                    {
+                        model: Teacher,
+                        attributes: { exclude: ['password'] }
+                    },
+                    {
+                        model: Student,
+                        attributes: { exclude: ['password'] },
+                    },
+                    {
+                        model: Exams,
+                    }
+                ]
+            })).dataValues
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    //remove
+    async function removeTeacher(classNumber, teacherId) {
+        try {
+            const classe = await Classes.findByPk(classNumber);
+            console.log(classe)
+            if (classe) {
+                await classe.removeTeacher(teacherId);
+                console.log('professor removido')
+                return true
+            } else {
+                console.log('Turma não encontrada.');
+                return false
+            }
+        } catch (error) {
+            console.error('Erro ao remover a relação:', error);
+            return false
+        }
+    }
+
+    async function removeStudent(id) {
+
+    }
+
+    async function removeExam(id) {
+
     }
 
     async function destroy(number) {
@@ -49,6 +82,7 @@ export default function createClasses() {
         getAll,
         getByNumber,
         getDataByNumber,
+        removeTeacher,
         destroy
     }
 }
