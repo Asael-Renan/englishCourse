@@ -1,80 +1,99 @@
 import express from 'express';
 import { teacherAuth } from '../middlewares.js';
-import createClasses from '../models/Classes.js';
-import createTeacher from '../models/Teacher.js';
-import createExams from '../models/Exams.js';
-import createStudent from '../models/Student.js';
+import ClassRepository from '../models/Classes.js';
+import TeacherRepository from '../models/Teacher.js';
+import StudentRepository from '../models/Student.js';
 import __dirname from '../dirname.js';
+import ExamsRepository from '../models/Exams.js';
 
 const router = express.Router();
 
-// Table from database
-const classes = createClasses(),
-    teacher = createTeacher(),
-    exams = createExams(),
-    student = createStudent();
+// Repositories
+const examRepository = new ExamsRepository();
+const classRepository = new ClassRepository();
+const teacherRepository = new TeacherRepository();
+const studentRepository = new StudentRepository();
 
-//load page
+// Load teacher page
 router.get('/:id', teacherAuth, (req, res) => {
     try {
-        res.sendFile(__dirname + '/public/pages/teacher.html')
+        res.sendFile(__dirname + '/public/pages/teacher.html');
     } catch {
-        res.status(404).send()
+        res.status(404).send('Teacher page not found');
     }
-})
+});
 
-//get data
+// Get teacher data
 router.get('/getData/:id', teacherAuth, async (req, res) => {
     try {
-        res.json(await teacher.getById(req.params.id))
+        const teacherId = req.params.id;
+        const teacherData = await teacherRepository.getById(teacherId);
+        if (teacherData) {
+            res.json(teacherData);
+        } else {
+            res.status(404).send('Teacher data not found');
+        }
     } catch {
-        res.status(404).send()
+        res.status(404).send('Error fetching teacher data');
     }
-})
+});
 
+// Get class data
 router.get('/getClassData/:classNumber', teacherAuth, async (req, res) => {
     try {
-        res.json(await teacher.getClassData(req.params.classNumber)) ? res.status(200).send() : res.status(404).send()
-    } catch (error) {
-        res.status(404).send()
-    }
-})
-
-//create exams
-router.post('/createExam', teacherAuth, async (req, res) => {
-    try {
-        const { title, grade, classNumber } = req.body
-        const exam = await exams.create(title, grade)
-        const classe = await classes.getByNumber(classNumber)
-        if (exam && classe) {
-            await classe.addExam(exam) ? res.status(201).send() : res.status(400).send()
+        const classNumber = parseInt(req.params.classNumber);
+        const classData = await classRepository.getDataByNumber(classNumber);
+        if (classData) {
+            res.json(classData);
+        } else {
+            res.status(404).send('Class data not found');
         }
     } catch (error) {
-        res.status(400).send()
+        res.status(404).send('Error fetching class data');
     }
-})
+});
 
-router.post('/setExameGradeToStudent', teacherAuth, (req, res) => {
+// Create exam
+router.post('/createExam', teacherAuth, async (req, res) => {
     try {
-        req.body.data.forEach(async studentData => {
-            const { grade, studentId, examId } = studentData
-            await student.setExamGrade(grade, studentId, examId)
-        });
-        console.log('------------------------------------------')
-        res.status(200).send()
+        const { title, grade, classNumber } = req.body;
+        await examRepository.create(title, grade, classNumber);
+        res.status(201).send('Exam created successfully');
     } catch (error) {
-        console.error(error)
-        res.status(400).send()
+        res.status(400).send('Error creating exam');
     }
-})
+});
 
+// Set exam grades for students
+router.post('/setExamGradeToStudent', teacherAuth, async (req, res) => {
+    try {
+        const { data } = req.body;
+        for (const studentData of data) {
+            const { grade, studentId, examId } = studentData;
+            await studentRepository.setExamGrade(grade, studentId, examId);
+        }
+        console.log('------------------------------------------');
+        res.status(200).send('Exam grades set successfully');
+    } catch (error) {
+        console.error(error);
+        res.status(400).send('Error setting exam grades');
+    }
+});
+
+// Update exam
 router.put('/updateExam/:id', teacherAuth, async (req, res) => {
     try {
-        const { title, grade } = req.body
-        const examId = req.params.id
-        await exams.update(examId, title, grade) ? res.status(200).send() : res.status(400).send()
+        const { title, grade } = req.body;
+        const examId = req.params.id;
+        const updated = await examRepository.update(examId, title, grade);
+        if (updated) {
+            res.status(200).send('Exam updated successfully');
+        } else {
+            res.status(400).send('Failed to update exam');
+        }
     } catch (error) {
-        res.status(400).send()
+        res.status(400).send('Error updating exam');
     }
-})
+});
+
 export default router;

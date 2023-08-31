@@ -42,8 +42,10 @@
                 <select id="class" class="mt-4 form-control"></select>
             </div>
         </div>
+        <div id="tableDiv" class="mt-5"></div>
     </section>
 
+    <script src="/js/table.js"></script>
     <script>
         (async () => {
             const id = window.location.href.split('/').pop()
@@ -60,13 +62,17 @@
             let selectIndex = 0
             for (let i = 0; i < classes.length; i++) {
                 select.innerHTML += `<option value="${select}">${classes[i].number}</option>`
-                if (classes[i].number === user.class.number) {
+                if (classes[i].number === user.classNumber) {
                     selectIndex = i
                 }
             }
 
             select.options.selectedIndex = selectIndex
             document.getElementById('name').value = user.name;
+
+            const table = new Table()
+            document.getElementById('tableDiv').appendChild(table.table)
+            table.addRow("1", "aaa")
         })()
 
     </script>

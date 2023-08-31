@@ -1,10 +1,21 @@
 import { ENUM, Sequelize, DataTypes } from "sequelize"
 import { connect } from '../db.js'
 
-export const Adm = connect.define('adm', {
+export const User = connect.define('users', {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+    },
+
     name: {
         type: DataTypes.STRING(255),
-        allowNull: false
+    },
+
+    email: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        unique: true
     },
 
     password: {
@@ -26,17 +37,11 @@ export const Classes = connect.define('classes', {
     }
 }, { createdAt: false, updatedAt: false })
 
+export const Adm = connect.define('adm', {}, { createdAt: false, updatedAt: false })
+
+export const Teacher = connect.define('teacher', {}, { createdAt: false, updatedAt: false })
+
 export const Student = connect.define('student', {
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-
-    password: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-
     grade: {
         type: DataTypes.FLOAT,
         defaultValue: 0
@@ -48,22 +53,11 @@ export const Student = connect.define('student', {
     }
 }, { createdAt: false, updatedAt: false })
 
-export const Teacher = connect.define('teacher', {
-    name: {
-        type: DataTypes.STRING(255),
-        allowNull: false
-    },
-
-    password: {
-        type: DataTypes.STRING,
-        allowNull: false
-    }
-}, { createdAt: false, updatedAt: false })
-
 export const Exams = connect.define('exams', {
     title: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true
     },
 
     grade: {
@@ -83,11 +77,17 @@ export const Student_exams = connect.define('student_exams', {
 }, { timestamps: false, })
 
 // associations
-Classes.hasMany(Student)
-Student.belongsTo(Classes)
+User.hasOne(Adm, { onDelete: 'CASCADE' });
+Adm.belongsTo(User);
 
-Classes.belongsToMany(Teacher, { through: Teacher_class })
-Teacher.belongsToMany(Classes, { through: Teacher_class })
+User.hasOne(Teacher, { onDelete: 'CASCADE' });
+Teacher.belongsTo(User);
+
+User.hasOne(Student, { onDelete: 'CASCADE' });
+Student.belongsTo(User);
+
+Classes.hasMany(Student);
+Student.belongsTo(Classes);
 
 Student.belongsToMany(Exams, { through: Student_exams })
 Exams.belongsToMany(Student, { through: Student_exams })
@@ -96,15 +96,18 @@ Student_exams.belongsTo(Student)
 Exams.hasMany(Student_exams)
 Student_exams.belongsTo(Exams)
 
-Classes.belongsToMany(Exams, { through: Class_exams })
-Exams.belongsToMany(Classes, { through: Class_exams })
+Classes.belongsToMany(Exams, { through: Class_exams });
+Exams.belongsToMany(Classes, { through: Class_exams });
 
-//sync
-Adm.sync({ force: false })
-Classes.sync({ force: false })
-Student.sync({ force: false })
-Teacher.sync({ force: false })
-Exams.sync({ force: false })
-Teacher_class.sync({ force: false })
-Class_exams.sync({ force: false })
-Student_exams.sync({ force: false })
+Classes.belongsToMany(Teacher, { through: Teacher_class });
+Teacher.belongsToMany(Classes, { through: Teacher_class });
+
+// sync tables
+(async () => {
+    try {
+        await connect.sync({ force: false });
+        console.log('Tabelas sincronizadas com sucesso.');
+    } catch (error) {
+        console.error('Erro ao sincronizar tabelas:', error);
+    }
+})();

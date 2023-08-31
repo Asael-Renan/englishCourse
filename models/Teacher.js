@@ -1,71 +1,71 @@
-import { Classes, Teacher, Student, Exams, Student_exams } from "./tables.js"
-import bcrypt from 'bcrypt'
+import UserRepository from "./User.js";
+import { Classes, Teacher, Student, Exams, Student_exams, User } from "./tables.js"
+export default class TeacherRepository extends UserRepository {
 
-export default function createTeacher() {
-
-    async function create(name, password) {
+    async create(name, email, password, classNumbers) {
         try {
-            if (!name && !password) {
-                return;
-            }
-            const hash = await bcrypt.hash(password, 10)
-            return await Teacher.create({ name, password: hash })
+            await super.checkClass(classNumbers)
+            const user = await super.create(name, email, password);
+            const teacher = await Teacher.create({ userId: user.dataValues.id });
+            classNumbers.forEach(async number => {
+                const classe = await Classes.findOne({ where: { number } })
+                teacher.addClasses(classe)
+            });
+            return { user: user.dataValues, teacher: teacher.dataValues }
         } catch (error) {
-            console.error(error)
+            throw new Error(`Error creating teacher: ${error.message}`)
         }
     }
 
-
-    async function getAll(password = false) {
-        if (password) {
-            return await Teacher.findAll({
-                raw: true,
-            })
-        }
-        return await Teacher.findAll({
-            raw: true,
-            attributes: { exclude: ['password'] }
-        })
-    }
-
-    async function getById(id) {
+    async getAll() {
         try {
-            return await Teacher.findByPk(id, {
-                attributes: { exclude: ['password'] },
-                include: Classes
+            const users = await super.getAll();
+            const teachers = users.filter(user => user.dataValues.teacher !== null)
+            return teachers.map(teacher => {
+                delete teacher.dataValues.adm
+                delete teacher.dataValues.student
+                teacher.dataValues.teacher = teacher.dataValues.teacher.dataValues
+                return teacher.dataValues
             })
         } catch (error) {
-            console.error('error: ' + error)
+            throw new Error(`Error getting teacher: ${error.message}`);
         }
     }
 
-    async function getClassData(classNumber) {
+    async getById(teacherId) {
         try {
-            return await Classes.findByPk(classNumber, {
+            teacherId = parseInt(teacherId)
+            const teacher = await Teacher.findByPk(teacherId, {
                 include: [
-                    {
-                        model: Student,
-                        include: Student_exams,
-                        attributes: { exclude: ['password'] }
-                    },
-                    {
-                        model: Exams
-                    }
+                    { model: User, attributes: { exclude: ['password'] } },
+                    { model: Classes }
                 ]
             })
+
+            if (teacher) {
+                const { id, name, email } = teacher.dataValues.user.dataValues,
+                    classes = teacher.dataValues.classes
+                return { teacherId, userId: id, name, email, classes }
+            } else {
+                throw new Error(`Error: id ${id} teacher doesn't exist`)
+            }
         } catch (error) {
-            console.error("Erro ao buscar dados da turma: " + error)
+            throw new Error(`Error getting teacher: ${error.message}`)
         }
     }
 
-    async function destroy(id) {
-        return await Teacher.destroy({ where: { id } })
-    }
-    return {
-        create,
-        getAll,
-        destroy,
-        getById,
-        getClassData
+    async delete(id) {
+        try {
+            const teacher = await this.getById(id)
+            if (teacher) {
+                await Teacher.destroy({ where: { id } });
+                await super.delete(teacher.userId)
+                return true;
+            } else {
+                throw new Error(`Error teacher not found`);
+            }
+        } catch (error) {
+            throw new Error(`Error deleting teacher: ${error.message}`);
+        }
     }
 }

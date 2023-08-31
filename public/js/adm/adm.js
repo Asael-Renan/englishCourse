@@ -6,13 +6,14 @@
 
     //load tables
     data.adm.forEach(value => {
-        addRowInAdmTable(value.id, value.name, document.getElementById('adm'))
+        addRowInAdmTable(value.adm.id, value.name, document.getElementById('adm'))
     })
     data.teacher.forEach(value => {
-        addRowInTeacherTable(value.id, value.name, document.getElementById('teacher'))
+        addRowInTeacherTable(value.teacher.id, value.name, document.getElementById('teacher'))
     })
+    console.log
     data.student.forEach(value => {
-        addRowInStudentTable(value.id, value.name, value.grade, value.absences, value.classNumber, document.getElementById('student'))
+        addRowInStudentTable(value.student.id, value.name, value.student.grade, value.student.absences, value.student.classNumber, document.getElementById('student'))
     })
 
     //loadClasses
@@ -74,6 +75,7 @@ function addRowInStudentTable(id, name, grade, absences, classNumber, table) {
 //create
 function createAdm() {
     const name = document.getElementById("nameAdm")
+    const email = document.getElementById("emailAdm")
     const password = document.getElementById("passwordAdm")
 
     if (!name.checkValidity() || !password.checkValidity()) {
@@ -82,6 +84,7 @@ function createAdm() {
 
     const data = {
         name: name.value,
+        email: email.value,
         password: password.value,
     }
 
@@ -97,6 +100,7 @@ function createAdm() {
 
 function createTeacher() {
     const name = document.getElementById("nameTeacher")
+    const email = document.getElementById("emailTeacher")
     const password = document.getElementById("passwordTeacher")
     const selectOptions = getSelectedOptions()
     console.log(selectOptions)
@@ -107,6 +111,7 @@ function createTeacher() {
 
     const data = {
         name: name.value,
+        email: email.value,
         password: password.value,
         classesId: selectOptions
     }
@@ -125,6 +130,7 @@ function createTeacher() {
 
 function createStudent() {
     const name = document.getElementById("nameStudent")
+    const email = document.getElementById("emailStudent")
     const password = document.getElementById("passwordStudent")
     const classNumberOptions = document.getElementById("classSelectStudent");
     const classNumber = classNumberOptions.value;
@@ -135,6 +141,7 @@ function createStudent() {
 
     const data = {
         name: name.value,
+        email: email.value,
         password: password.value,
         grade: 0,
         absences: 0,

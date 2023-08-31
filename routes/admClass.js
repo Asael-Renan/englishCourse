@@ -1,11 +1,11 @@
 import express from 'express';
 import { admAuth } from '../middlewares.js';
-import createClasses from '../models/Classes.js';
+import ClassRepository from '../models/Classes.js';
 import __dirname from '../dirname.js';
 
 const router = express.Router();
 
-const classes = createClasses();
+const classes = new ClassRepository();
 
 //load page
 router.get('/:number', admAuth, (req, res) => {
@@ -21,10 +21,16 @@ router.get('', admAuth, async (req, res) => {
 
 })
 
-//remove from class
-router.delete('/removeTeacher/:classNumber/:teacherId', admAuth, async (req, res) => {
+//add to class
+router.post('/teacher/:classNumber/:teacherId', admAuth, async (req, res) => {
     const {classNumber, teacherId} = req.params
-    console.log(classNumber + teacherId)
+    await classes.addTeacher(classNumber, teacherId)
+    res.status(200).send()
+})
+
+//remove from class
+router.delete('/teacher/:classNumber/:teacherId', admAuth, async (req, res) => {
+    const {classNumber, teacherId} = req.params
     await classes.removeTeacher(classNumber, teacherId)
     res.status(201).send()
 })

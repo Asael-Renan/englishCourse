@@ -1,88 +1,145 @@
-import { Classes, Teacher, Student, Exams } from "./tables.js"
+import { Classes, Teacher, Student, Exams, User, Student_exams } from "./tables.js";
 
-export default function createClasses() {
+export default class ClassRepository {
 
-    async function create(number, level = 'basic') {
+    async create(number, level = 'basic') {
         try {
-            return await Classes.create({ number: parseInt(number), level })
+            return await Classes.create({ number: parseInt(number), level });
         } catch (error) {
-            console.error('Erro ao criar classe: ' + error)
+            console.error('Error creating class:', error);
+            throw new Error('Error creating class: ' + error.message);
         }
     }
 
-    async function getAll() {
+    async checkClass(numbers) {
+        const classes = await Classes.findAll();
+
+        if (classes.length <= 0) {
+            throw new Error("No classes");
+        }
+
+        if (!Array.isArray(numbers)) {
+            numbers = [numbers];
+        }
+
+        const missingClasses = numbers.filter(number => !classes.some(cls => cls.number === number));
+        if (missingClasses.length > 0) {
+            throw new Error(`Classes not found: ${missingClasses.join(', ')}`);
+        }
+
+        return true;
+    }
+
+    async getAll() {
         try {
             return await Classes.findAll({
                 raw: true,
-            })
+            });
         } catch (error) {
-            console.error('Erro ao obter classe: ' + error)
+            throw new Error('Error getting classes: ' + error.message);
         }
     }
 
-    async function getByNumber(number) {
-        return await Classes.findByPk(number, { raw: true })
+    async getByNumber(number) {
+        try {
+            const classe = await Classes.findByPk(number, { raw: true });
+            console.log(classe)
+            if (classe) {
+                return classe
+            } else {
+                throw new Error(`Error class not found`)
+            }
+        } catch (error) {
+            console.error('Error getting class:', error);
+            throw new Error('Error getting class: ' + error.message);
+        }
     }
 
-    async function getDataByNumber(number) {
+    async getDataByNumber(number) {
         try {
-            return (await Classes.findByPk(number, {
+            return await Classes.findByPk(number, {
                 include: [
                     {
                         model: Teacher,
-                        attributes: { exclude: ['password'] }
+                        include: {
+                            model: User,
+                            attributes: { exclude: ['password'] }
+                        }
                     },
                     {
                         model: Student,
-                        attributes: { exclude: ['password'] },
+                        include: [
+                            { model: User, attributes: { exclude: ['password'] } },
+                            { model: Student_exams }
+                        ],
                     },
                     {
                         model: Exams,
                     }
                 ]
-            })).dataValues
+            });
         } catch (error) {
-            console.error(error)
+            console.error('Error getting class data:', error);
+            throw new Error('Error getting class data: ' + error.message);
         }
     }
 
-    //remove
-    async function removeTeacher(classNumber, teacherId) {
+    async addTeacher(classNumber, teacherId) {
         try {
             const classe = await Classes.findByPk(classNumber);
-            console.log(classe)
-            if (classe) {
-                await classe.removeTeacher(teacherId);
-                console.log('professor removido')
-                return true
-            } else {
-                console.log('Turma não encontrada.');
-                return false
+            const teacher = await Teacher.findByPk(teacherId);
+            if (classe && teacher) {
+                await classe.addTeacher(teacher);
+                return true;
             }
+            throw new Error('Error adding teacher to class: Class or teacher not found');
         } catch (error) {
-            console.error('Erro ao remover a relação:', error);
-            return false
+            console.error('Error adding teacher to class:', error);
+            throw new Error('Error adding teacher to class: ' + error.message);
         }
     }
 
-    async function removeStudent(id) {
-
+    async addExam(exam, classNumber) {
+        try {
+            const classe = await Classes.findByPk(classNumber);
+            const teacher = await Teacher.findByPk(exam);
+            if (classe && teacher) {
+                await classe.addTeacher(teacher);
+                return true;
+            }
+            throw new Error('Error adding teacher to class: Class or teacher not found');
+        } catch (error) {
+            console.error('Error adding teacher to class:', error);
+            throw new Error('Error adding teacher to class: ' + error.message);
+        }
     }
 
-    async function removeExam(id) {
-
+    async removeTeacher(classNumber, teacherId) {
+        try {
+            const classe = await Classes.findByPk(classNumber);
+            if (!classe) {
+                throw new Error('Error removing teacher: Class not found');
+            }
+            await classe.removeTeacher(teacherId);
+            return true;
+        } catch (error) {
+            console.error('Error removing teacher from class:', error);
+            throw new Error('Error removing teacher from class: ' + error.message);
+        }
     }
 
-    async function destroy(number) {
-        return await Classes.destroy({ where: { number } })
-    }
-
-    return {
-        create,
-        getAll,
-        getByNumber,
-        getDataByNumber,
-        removeTeacher,
-        destroy
+    async delete(number) {
+        try {
+            const deletedRows = await Classes.destroy({ where: { number } });
+            if (deletedRows === 1) {
+                console.log('Class deleted successfully.');
+                return true;
+            } else {
+                throw new Error('Error deleting class: Class not found.');
+            }
+        } catch (error) {
+            console.error('Error deleting class:', error);
+            throw new Error('Error deleting class: ' + error.message);
+        }
     }
 }

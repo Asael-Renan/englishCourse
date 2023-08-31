@@ -1,80 +1,102 @@
-import { Classes, Student } from "./tables.js"
-import { Student_exams } from "./tables.js";
-import bcrypt from 'bcrypt'
+import { Classes, User, Student, Student_exams } from "./tables.js"
+import UserRepository from "./User.js";
 
-export default function createStudent() {
-    async function create(name, password, classNumber, grade = 0, absences = 0) {
+export default class StudentRepository extends UserRepository {
+    async create(name, email, password, grade = 0, absences = 0, classNumber) {
         try {
-            const hashedPassword = await bcrypt.hash(password, 10)
-            return await Student.create({ name, password: hashedPassword, grade, absences, classNumber })
+            console.log(classNumber)
+            await super.checkClass(classNumber)
+            const user = await super.create(name, email, password);
+            const student = await Student.create({ userId: user.dataValues.id, classNumber, grade, absences });
+            return { user: user.dataValues, student: student.dataValues }
         } catch (error) {
-            console.error('Erro ao criar aluno:', error)
+            throw new Error(`Error creating student: ${error.message}`)
         }
     }
 
-    async function getAll(password = false) {
-        if (password) {
-            return await Student.findAll({
-                raw: true,
-            })
-        }
-        return await Student.findAll({
-            raw: true,
-            attributes: { exclude: ['password'] }
-        })
-    }
-
-    async function getById(id) {
-        return await Student.findByPk(id, { include: Classes, attributes: { exclude: ['password'] } })
-    }
-
-    async function setExamGrade(grade, studentId, examId) {
+    async getAll() {
         try {
-            grade = parseFloat(grade)
-            if (grade < 0) return false
+            const users = await super.getAll();
+            if (!users) {
+                return false
+            }
+            const students = users.filter(user => user.dataValues.student !== null)
+            return students.map(student => {
+                delete student.dataValues.teacher
+                delete student.dataValues.adm
+                student.dataValues.student = student.dataValues.student.dataValues
+                return student.dataValues
+            })
+        } catch (error) {
+            throw new Error(`Error getting student: ${error.message}`);
+        }
+    }
 
-            const studentExam = await Student_exams.findOrCreate({
+    async getById(studentId) {
+        try {
+            studentId = parseInt(studentId);
+            const student = await Student.findByPk(studentId, { include: { model: User, attributes: { exclude: ['password', 'id'] } }, });
+
+            if (student) {
+                const data = student.dataValues,
+                    { id, userId, grade, absences, classNumber } = data,
+                    userData = data.user.dataValues;
+
+                return { studentId: id, userId, ...userData, grade, absences, classNumber };
+            } else {
+                return false;
+            }
+        } catch (error) {
+            throw new Error(`Error getting student: ${error.message}`);
+        }
+    }
+
+
+    async setExamGrade(grade, studentId, examId) {
+        try {
+            grade = parseFloat(grade);
+
+            if (grade < 0) {
+                return false;
+            }
+
+            const [studentExamRecord, created] = await Student_exams.findOrCreate({
                 where: { studentId, examId },
                 defaults: { studentGrade: grade }
             });
 
-            const [studentExamRecord, created] = studentExam,
-                examGrade = studentExamRecord.dataValues.studentGrade,
-                student = await Student.findByPk(studentId, { raw: true }),
-                studentGrade = student.grade
+            const student = await Student.findByPk(studentId);
+
             if (!created) {
-                if (examGrade === grade) return false
-                console.log(`Nota atualizada para ${student.name}: ${studentGrade} - ${examGrade} + ${grade} = ${studentGrade - examGrade + grade}`)
+                const examGrade = studentExamRecord.studentGrade;
+                const updatedGrade = student.grade - examGrade + grade;
+                console.log(`Nota atualizada para ${student.name}: ${student.grade} - ${examGrade} + ${grade} = ${updatedGrade}`);
                 await studentExamRecord.update({ studentGrade: grade });
-
-                await Student.update(
-                    { grade: studentGrade - examGrade + grade },
-                    { where: { id: studentId } }
-                );
-                return true;
+                await student.update({ grade: updatedGrade });
             } else {
-                console.log(`Nota criada para ${student.name}: ${studentGrade} + ${grade} = ${studentGrade + examGrade}`)
-                await Student.update(
-                    { grade: studentGrade + examGrade },
-                    { where: { id: studentId } }
-                );
-
-                return true;
+                const newGrade = student.grade + grade;
+                console.log(`Nota criada para ${student.name}: ${student.grade} + ${grade} = ${newGrade}`);
+                await student.update({ grade: newGrade });
             }
+
+            return true;
         } catch (error) {
-            console.error('Erro ao atribuir nota: ' + error)
+            throw new Error(`Error setting exam grade: ${error.message}`)
         }
     }
 
-    async function destroy(id) {
-        return await Student.destroy({ where: { id } })
-    }
-
-    return {
-        create,
-        getAll,
-        destroy,
-        getById,
-        setExamGrade
+    async delete(id) {
+        try {
+            const Student = await this.getById(id)
+            if (Student) {
+                await Student.destroy({ where: { id } });
+                await super.delete(Student.userId)
+                return true
+            } else {
+                throw new Error(`Error student not found`);
+            }
+        } catch (error) {
+            throw new Error(`Error deleting student: ${error.message}`);
+        }
     }
 }

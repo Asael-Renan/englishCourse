@@ -3,6 +3,7 @@
     const id = window.location.href.split('/').pop(),
         response = await fetch(`/teacher/getData/${id}`),
         teacher = await response.json();
+        console.log(teacher)
 
     document.getElementById('name').textContent = teacher.name;
 
@@ -21,6 +22,7 @@ document.getElementById('examsTableDiv').appendChild(examTable.table)
 async function getClassData(classNumber) {
     const response = await fetch(`/teacher/getClassData/${classNumber}`),
         data = await response.json();
+        console.log(data)
     localStorage.setItem('classSelected', JSON.stringify(data))
     return data
 }
@@ -56,7 +58,7 @@ async function selectClass(classNumber) {
     document.getElementById('createExam').dataset.classNumber = classNumber
 
     classSelected.students.forEach(student => {
-        studentTable.addRow({ text: student.name, class: 'studentName' }, student.absences, student.grade)
+        studentTable.addRow({ text: student.user.name, class: 'studentName' }, student.absences, student.grade)
     });
 
     classSelected.exams.forEach(exam => {
