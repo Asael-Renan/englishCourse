@@ -4,16 +4,31 @@ export default class TeacherRepository extends UserRepository {
 
     async create(name, email, password, classNumbers) {
         try {
-            await super.checkClass(classNumbers)
+            await super.checkClass(classNumbers);
             const user = await super.create(name, email, password);
             const teacher = await Teacher.create({ userId: user.dataValues.id });
-            classNumbers.forEach(async number => {
-                const classe = await Classes.findOne({ where: { number } })
-                teacher.addClasses(classe)
-            });
-            return { user: user.dataValues, teacher: teacher.dataValues }
+
+            const classes = [];
+            const classesNotFound = [];
+
+            for (const number of classNumbers) {
+                const classe = await Classes.findOne({ where: { number } });
+                if (classe) {
+                    classes.push(classe);
+                } else {
+                    classesNotFound.push(number);
+                }
+            }
+
+            if (classes.length === classNumbers.length) {
+                await teacher.addClasses(classes);
+            } else {
+                throw new Error(`Classes ${classesNotFound.join(', ')} not found`);
+            }
+
+            return { user: user.dataValues, teacher: teacher.dataValues };
         } catch (error) {
-            throw new Error(`Error creating teacher: ${error.message}`)
+            throw new Error(`Error creating teacher: ${error.message}`);
         }
     }
 
@@ -24,8 +39,9 @@ export default class TeacherRepository extends UserRepository {
             return teachers.map(teacher => {
                 delete teacher.dataValues.adm
                 delete teacher.dataValues.student
-                teacher.dataValues.teacher = teacher.dataValues.teacher.dataValues
-                return teacher.dataValues
+                const teachersData = teacher.dataValues.teacher.dataValues
+                delete teacher.dataValues.teacher
+                return {...teacher.dataValues, ...teachersData}
             })
         } catch (error) {
             throw new Error(`Error getting teacher: ${error.message}`);

@@ -1,4 +1,4 @@
-class Table {
+export default class Table {
     constructor(id = null) {
         this.table = document.createElement('table');
         if (id) this.table.id = id;
@@ -13,13 +13,16 @@ class Table {
     }
 
     setHeader(...cells) {
-        this.head.innerHTML = cells.map(cell => {
-            if (typeof cell === 'object') {
-                return `<th class="${cell.class}">${cell.text}</th>`
-            } else {
-                return `<th>${cell}</th>`
-            }
-        }).join('');
+        this.head.innerHTML = cells.map(this.createHeaderCell).join('');
+    }
+
+    createHeaderCell(cell) {
+        if (typeof cell === 'object') {
+            const { class: cellClass, text } = cell;
+            return `<th class="${cellClass}">${text}</th>`;
+        } else {
+            return `<th>${cell}</th>`;
+        }
     }
 
     addRow(...cells) {
@@ -27,59 +30,75 @@ class Table {
         tr.dataset.row = this.rows.length;
 
         for (const cellData of cells) {
-            const td = document.createElement('td');
-
-            if (typeof cellData === 'object') {
-                const { text, classList, attributes, clickable } = cellData;
-
-                if (classList && Array.isArray(classList)) {
-                    td.classList.add(...classList);
-                }
-
-                if (attributes && typeof attributes === 'object') {
-                    for (const attr in attributes) {
-                        td.setAttribute(attr, attributes[attr]);
-                    }
-                }
-
-                if (clickable) {
-                    td.addEventListener('click', () => {
-                        window.location.href = window.location.origin + clickable;
-                    });
-                }
-                td.innerHTML = text || '';
-
-            } else {
-                td.innerHTML = cellData;
-            }
-
+            const td = this.createTableCell(cellData);
             tr.appendChild(td);
         }
 
         this.body.appendChild(tr);
         this.rows.push(tr);
+        return tr
     }
 
+    createTableCell(cellData) {
+        const td = document.createElement('td');
+
+        if (typeof cellData === 'object') {
+            let { text, classList, attributes, clickable, DOMElement } = cellData;
+
+            if (Array.isArray(classList)) {
+                td.classList.add(...classList);
+            }
+
+            if (typeof attributes === 'object') {
+                for (const attr in attributes) {
+                    td.setAttribute(attr, attributes[attr]);
+                }
+            }
+
+            if (clickable) {
+                td.addEventListener('click', () => {
+                    clickable.func(clickable.params);
+                });
+            }
+
+            if (text) td.innerHTML = `${text}`;
+
+            if (DOMElement) {
+                if (!Array.isArray(DOMElement)) DOMElement = [DOMElement];
+
+                DOMElement.forEach(element => {
+                    if (element instanceof HTMLElement) {
+                        td.appendChild(element);
+                    }
+                });
+            }
+
+        } else {
+            td.innerHTML = `${cellData}`;
+        }
+
+        return td;
+    }
 
     getCell(rowIndex, columnIndex) {
-        if (rowIndex >= 0 && rowIndex < this.rows.length) {
-            const row = this.rows[rowIndex];
-            if (columnIndex >= 0 && columnIndex < row.children.length) {
-                return row.children[columnIndex];
-            }
+        const row = this.rows[rowIndex];
+        if (row && columnIndex >= 0 && columnIndex < row.children.length) {
+            return row.children[columnIndex];
         }
         return null;
     }
-
 
     setFoot(...cells) {
         this.foot.innerHTML = cells.map(cell => `<th>${cell}</th>`).join('');
     }
 
     removeRow(rowNumber) {
-        this.rows[rowNumber].remove();
-        this.rows.splice(rowNumber, 1);
-        this.updateRowNumbers();
+        const row = this.rows[rowNumber];
+        if (row) {
+            row.remove();
+            this.rows.splice(rowNumber, 1);
+            this.updateRowNumbers();
+        }
     }
 
     clear() {
@@ -98,7 +117,9 @@ class Table {
     }
 
     updateRowNumbers() {
-        this.rows.forEach((row, index) => row.dataset.row = index);
+        this.rows.forEach((row, index) => {
+            row.dataset.row = index;
+        });
     }
 
     getRowCount() {

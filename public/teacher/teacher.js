@@ -1,9 +1,11 @@
+import Table from "../js/table.js";
+import httpRequests from "../js/httpRequests.js";
+
 //load initial data
 (async () => {
     const id = window.location.href.split('/').pop(),
         response = await fetch(`/teacher/getData/${id}`),
         teacher = await response.json();
-        console.log(teacher)
 
     document.getElementById('name').textContent = teacher.name;
 
@@ -14,18 +16,11 @@
 
 })()
 
+const http = new httpRequests()
 const studentTable = new Table('studentTable')
 const examTable = new Table('examsTable')
 document.getElementById('studentTableDiv').appendChild(studentTable.table)
 document.getElementById('examsTableDiv').appendChild(examTable.table)
-
-async function getClassData(classNumber) {
-    const response = await fetch(`/teacher/getClassData/${classNumber}`),
-        data = await response.json();
-        console.log(data)
-    localStorage.setItem('classSelected', JSON.stringify(data))
-    return data
-}
 
 function createClassButton(classNumber) {
     const classButtons = document.getElementById('classButtons');
@@ -48,29 +43,42 @@ function updateClassButtons(classNumber) {
 }
 
 async function selectClass(classNumber) {
+    document.getElementById('createExamForm').style.display = 'flex'
     studentTable.clear()
     examTable.clear()
     studentTable.setHeader('Nome', 'Faltas', 'Nota')
     examTable.setHeader('Titulo', 'Valor', 'Atribuir valor')
 
-    const classSelected = await getClassData(classNumber)
+    const classSelected = await http.getClassData(classNumber)
     updateClassButtons(classNumber)
     document.getElementById('createExam').dataset.classNumber = classNumber
 
     classSelected.students.forEach(student => {
-        studentTable.addRow({ text: student.user.name, class: 'studentName' }, student.absences, student.grade)
+        studentTable.addRow({ text: student.user.name, class: 'studentName' },
+            `<button id="removAbsence" class="btn btn-danger btn-sm me-1">-</button>${student.absences}<button id="addAbsence" class="btn btn-success btn-sm ms-1">+</button>`,
+            student.grade)
     });
 
     classSelected.exams.forEach(exam => {
+        const button = document.createElement("button");
+        button.classList.add("btn", "btn-warning");
+        button.textContent = "+";
+        button.id = "updateButton";
+
+        const buttonElement = {
+            text: button.outerHTML,
+            clickable: { func: updateStudentTable, params: { id: exam.id, title: exam.title, grade: exam.grade } }
+        };
+
         examTable.addRow(
             exam.title,
             exam.grade,
-            `<button class="btn btn-warning" onclick="updateStudentTable('${exam.id}', '${exam.title}', ${exam.grade})">+</button>`
-        )
-    })
+            buttonElement
+        );
+    });
 }
 
-function updateStudentTable(id, title, grade) {
+function updateStudentTable({ id, title, grade }) {
     studentTable.clear()
     const data = JSON.parse(localStorage.getItem('classSelected')),
         students = data.students
@@ -79,16 +87,22 @@ function updateStudentTable(id, title, grade) {
     for (const student of students) {
         const exam = student.student_exams.find(obj => obj.examId == id)
         studentTable.addRow(
-            student.name,
+            student.user.name,
             createInput(grade, exam).outerHTML
         )
     }
     studentTable.setFoot(
-        `<button class="btn btn-danger w-100" onclick="selectClass(${data.number})">Cancelar</button>`,
+        `<button id="cancelSaveGrade" class="btn btn-danger w-100">Cancelar</button>`,
         `<button id="saveGradeBtn" class="btn btn-success w-100">Salvar</button>`
     )
 
-    document.getElementById('saveGradeBtn').addEventListener('click', async () => { await saveStudentGrade(data.number) })
+    document.getElementById('saveGradeBtn').addEventListener('click', async () => {
+        await saveStudentGrade(data.number)
+    })
+
+    document.getElementById('cancelSaveGrade').addEventListener('click', async () => {
+        selectClass(data.number)
+    })
 }
 
 function createInput(grade, exam) {
@@ -97,11 +111,13 @@ function createInput(grade, exam) {
     input.classList.add('form-control');
     input.min = 0;
     input.max = grade;
-    input.setAttribute('value', exam.studentGrade)
+    input.setAttribute('value', exam.studentGrade || 0)
     input.dataset.studentId = exam.studentId;
     input.dataset.examId = exam.examId;
     return input;
 }
+
+document.getElementById('createExam').addEventListener('click', createExam)
 
 async function createExam() {
     try {
@@ -116,33 +132,24 @@ async function createExam() {
             body: JSON.stringify({ title, grade, classNumber })
         })
     } catch (error) {
-        console.log(error)
+        console.error(error)
     }
 }
 
 async function saveStudentGrade(classNumber) {
-    try {
-        const inputs = studentTable.body.querySelectorAll('input'),
-            data = []
+    const inputs = studentTable.body.querySelectorAll('input'),
+        data = []
 
-        inputs.forEach(input => {
-            data.push({ studentId: input.dataset.studentId, examId: input.dataset.examId, grade: input.value })
-        })
-        const request = await fetch('/teacher/setExameGradeToStudent', {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ data })
-        })
-        if (request) {
-            setTimeout(() => {
-                selectClass(classNumber)
-            }, 100)
-        } else {
-            console.log('não funcionou')
-        }
-    } catch (error) {
-        console.error(error)
+    inputs.forEach(input => {
+        const { studentId, examId } = input.dataset
+        data.push({ studentId, examId, grade: input.value })
+    })
+
+    const ok = await http.saveStudentGrade(data)
+    if (ok) {
+        await selectClass(classNumber)
+        console.log("Nota atualizada com sucesso!")
+    } else {
+        console.log("Erro ao atualizar nota.")
     }
 }

@@ -72,7 +72,6 @@ router.post('/setExamGradeToStudent', teacherAuth, async (req, res) => {
             const { grade, studentId, examId } = studentData;
             await studentRepository.setExamGrade(grade, studentId, examId);
         }
-        console.log('------------------------------------------');
         res.status(200).send('Exam grades set successfully');
     } catch (error) {
         console.error(error);

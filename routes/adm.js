@@ -19,7 +19,7 @@ const adm = new AdmRepository(),
 //load pages
 router.get('/', admAuth, (req, res) => {
     try {
-        res.sendFile(__dirname + '/public/pages/adm/adm.html');
+        res.sendFile(__dirname + '/public/adm/adm.html');
     } catch (error) {
         console.error('Error loading admin page:', error);
         res.status(500).send('Internal Server Error');
@@ -28,7 +28,7 @@ router.get('/', admAuth, (req, res) => {
 
 router.get('/student/:id', admAuth, (req, res) => {
     try {
-        res.sendFile(__dirname + '/public/pages/adm/editStudent.html');
+        res.sendFile(__dirname + '/public/adm/editStudent.html');
     } catch (error) {
         console.error('Error loading edit student page:', error);
         res.status(500).send('Internal Server Error');
@@ -37,7 +37,7 @@ router.get('/student/:id', admAuth, (req, res) => {
 
 router.get('/teacher/:id', admAuth, (req, res) => {
     try {
-        res.sendFile(__dirname + '/public/pages/adm/editTeacher.html');
+        res.sendFile(__dirname + '/public/adm/editTeacher.html');
     } catch (error) {
         console.error('Error loading edit teacher page:', error);
         res.status(500).send('Internal Server Error');
@@ -115,7 +115,7 @@ router.post('/createAdm', admAuth, async (req, res) => {
 router.post('/createTeacher', admAuth, async (req, res) => {
     try {
         const { name, email, password, classesId } = req.body;
-        console.log(classesId)
+        // console.log(classesId)
         await teacher.create(name, email, password, classesId);
         res.status(201).send();
     } catch (error) {
@@ -142,12 +142,8 @@ router.post('/createStudent', admAuth, async (req, res) => {
 router.delete('/deleteAdm/:id', admAuth, async (req, res) => {
     try {
         const id = req.params.id;
-        const deleted = await adm.delete(id);
-        if (deleted) {
-            res.status(204).send();
-        } else {
-            res.status(404).send('Admin not found');
-        }
+        await adm.delete(id);
+        res.status(204).send();
     } catch (error) {
         console.error('Error deleting admin:', error);
         res.status(500).send('Failed to delete admin');

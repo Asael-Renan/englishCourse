@@ -32,7 +32,7 @@ const user = new UserRepository(),
 app.get('/login', (req, res) => {
     try {
         console.log(req.session.user)
-        res.sendFile(__dirname + '/public/pages/login.html');
+        res.sendFile(__dirname + '/public/login.html');
     } catch (error) {
         console.error('Error loading login page:', error);
         res.status(500).send('Internal Server Error');

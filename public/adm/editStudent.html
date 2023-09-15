@@ -42,11 +42,11 @@
                 <select id="class" class="mt-4 form-control"></select>
             </div>
         </div>
-        <div id="tableDiv" class="mt-5"></div>
+        <div id="tableDiv" class="mt-5 container"></div>
     </section>
 
-    <script src="/js/table.js"></script>
-    <script>
+    <script type="module">
+        import { Table } from '../../js/Table.js'
         (async () => {
             const id = window.location.href.split('/').pop()
             const responseUser = await fetch(`/getStudent/${id}`);

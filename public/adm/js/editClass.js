@@ -12,7 +12,7 @@
     teacherTable.setHeader('Nome', { text: '', class: 'removeBtn' })
 
     for (const teacher of teachers) {
-        teacherTable.addRow({ text: teacher.name, clickable: `/adm/teacher/${teacher.id}` }, openRemoveModalButton('teacher', teacher.id))
+        teacherTable.addRow({ text: teacher.user.name, clickable: `/adm/teacher/${teacher.id}` }, openRemoveModalButton('teacher', teacher.id))
     }
     //student table
     const studentTable = new Table('studentTable')
@@ -20,7 +20,7 @@
     studentTable.setHeader('nome', 'faltas', 'nota total', { text: '', class: 'removeBtn' })
 
     for (const student of students) {
-        studentTable.addRow({ class: 'studentName', text: student.name }, student.absences, student.grade, openRemoveModalButton('student', student.id))
+        studentTable.addRow({ class: 'studentName', text: student.user.name }, student.absences, student.grade, openRemoveModalButton('student', student.id))
     }
 
     //exam table

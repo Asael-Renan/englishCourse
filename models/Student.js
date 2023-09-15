@@ -2,9 +2,8 @@ import { Classes, User, Student, Student_exams } from "./tables.js"
 import UserRepository from "./User.js";
 
 export default class StudentRepository extends UserRepository {
-    async create(name, email, password, grade = 0, absences = 0, classNumber) {
+    async create(name, email, password, classNumber, grade = 0, absences = 0) {
         try {
-            console.log(classNumber)
             await super.checkClass(classNumber)
             const user = await super.create(name, email, password);
             const student = await Student.create({ userId: user.dataValues.id, classNumber, grade, absences });
@@ -24,8 +23,9 @@ export default class StudentRepository extends UserRepository {
             return students.map(student => {
                 delete student.dataValues.teacher
                 delete student.dataValues.adm
-                student.dataValues.student = student.dataValues.student.dataValues
-                return student.dataValues
+                const studentsData = student.dataValues.student.dataValues
+                delete student.dataValues.student
+                return {...student.dataValues, ...studentsData}
             })
         } catch (error) {
             throw new Error(`Error getting student: ${error.message}`);
@@ -51,6 +51,20 @@ export default class StudentRepository extends UserRepository {
         }
     }
 
+    async setClass(studentId, classNumber) {
+        try {
+            this.checkClass(classNumber)
+            const student = await Student.findByPk(studentId)
+            const classe = await Classes.findByPk(classNumber)
+            if (classe && student) {
+                await student.addClasses(classe)
+                return true
+            }
+            return false
+        } catch (error) {
+            throw new Error("Error setting class to student" + error.message)
+        }
+    }
 
     async setExamGrade(grade, studentId, examId) {
         try {
@@ -87,10 +101,10 @@ export default class StudentRepository extends UserRepository {
 
     async delete(id) {
         try {
-            const Student = await this.getById(id)
-            if (Student) {
+            const student = await this.getById(id)
+            if (student) {
                 await Student.destroy({ where: { id } });
-                await super.delete(Student.userId)
+                await super.delete(student.userId)
                 return true
             } else {
                 throw new Error(`Error student not found`);

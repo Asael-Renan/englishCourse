@@ -1,18 +1,27 @@
-import { Exams, Classes } from "./tables.js";
+import { Exams, Classes, Student } from "./tables.js";
 
 export default class ExamsRepository {
 
     async create(title, grade = 10, classNumber) {
         try {
-            const classe = await Classes.findByPk(classNumber)
-            if (classe) {
-                const exam = await Exams.create({ title, grade });
-                exam.addClasses(classe)
-            } else {
-                throw new Error(`Class not found`)
+            const classe = await Classes.findByPk(classNumber, { include: Student });
+            if (!classe) {
+                throw new Error(`Class not found`);
             }
+
+            const exam = await Exams.create({ title, grade });
+            await exam.addClasses(classe);
+
+            const students = classe.dataValues.students;
+            if (students && students.length > 0) {
+                await exam.addStudent(students);
+            } else {
+                throw new Error(`No students found in the class`);
+            }
+
+            return exam;
         } catch (error) {
-            console.error('Error creating exam: ' + error);
+            console.error('Error creating exam: ' + error.message);
             throw new Error('Failed to create exam');
         }
     }

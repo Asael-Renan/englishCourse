@@ -19,8 +19,9 @@ export default class AdmRepository extends UserRepository {
             return adms.map(adm => {
                 delete adm.dataValues.teacher
                 delete adm.dataValues.student
-                adm.dataValues.adm = adm.dataValues.adm.dataValues
-                return adm.dataValues
+                const admsData = adm.dataValues.adm.dataValues
+                delete adm.dataValues.adm
+                return {...adm.dataValues, ...admsData}
             })
         } catch (error) {
             throw new Error(`Error getting adm: ${error.message}`);
